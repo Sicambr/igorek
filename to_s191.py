@@ -92,12 +92,47 @@ def read_catia_file(path_to_folder, file_name):
     return blocks
 
 
+def get_file_list(path):
+    try:
+        all_files = os.listdir(path)
+        nc_files = list()
+        elements_to_delete = list()
+        folders = list()
+        for element in all_files:
+            if element.lower().endswith('.nc'):
+                nc_files.append(element)
+            else:
+                current_path = os.path.join(path, element)
+                if os.path.isdir(current_path):
+                    folders.append(element)
+                else:
+                    elements_to_delete.append(element)
+        if not len(nc_files):
+            raise Exception
+        
+    except Exception as exc:
+        with open('error.log', 'a', encoding='UTF-8') as error_log:
+            error_message = list()
+            error_message.append('{mistake}, {comment}\n'.format(
+                mistake=type(exc), comment=exc))
+            error_message.append(f'В папке {path} нет файлов с расширением *.NC\n')
+            error_message.append('\n')
+            for mistakes in error_message:
+                error_log.write(mistakes)
+                
+    analysis = {'nc':nc_files, 'dir':folders, 'delete':elements_to_delete}
+    return analysis
+
+
 def main():
     file_name = '111.NC'
     current_path = os.path.abspath('')
-    row_blocks = read_catia_file(current_path, file_name)
-    if row_blocks:
-        create_normal_blocks(row_blocks[:])
+    objects_in_folder = get_file_list(current_path)
+    print(objects_in_folder)
+
+    # row_blocks = read_catia_file(current_path, file_name)
+    # if row_blocks:
+    #     create_normal_blocks(row_blocks[:])
 
 
 main()
