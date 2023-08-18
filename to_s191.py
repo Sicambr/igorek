@@ -1,4 +1,5 @@
 import os
+import datetime
 
 
 def bumotec_head_block(tools):
@@ -11,7 +12,26 @@ def bumotec_head_block(tools):
                 head_text.append(line)
             for tool in tools:
                 head_text.insert(6, tool)
-    except Exception as exc:
+            head_text[4] = ''.join(('(', str(datetime.date.today()), ')\n'))
+    except BaseException as exc:
+        error_message = f'Попытка открыть {path} провалилась. '
+        f'Проверьте наличие {head_file_name} на указанном пути.\n'
+        add_to_error_log(exc, error_message)
+    return head_text
+
+
+def macodell_head_block(tools):
+    head_file_name = 'macodell_head.txt'
+    path = os.path.join(os.path.abspath(''), 'data', head_file_name)
+    head_text = list()
+    try:
+        with open(path, 'r', encoding='UTF-8') as head_file:
+            for line in head_file:
+                head_text.append(line)
+            for tool in tools:
+                head_text.insert(6, tool)
+            head_text[4] = ''.join(('(', str(datetime.date.today()), ')\n'))
+    except BaseException as exc:
         error_message = f'Попытка открыть {path} провалилась. '
         f'Проверьте наличие {head_file_name} на указанном пути.\n'
         add_to_error_log(exc, error_message)
@@ -27,8 +47,11 @@ def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
         frame_message = ''
         buffer_message = ''
         start_write = False
+        add_m12 = False
         with open(current_path, 'r', encoding='utf-8') as file:
             for line in file:
+                if line.startswith('(') and add_m12:
+                    new_nc_file.append('M12\n')
                 if start_write:
                     new_nc_file.append(line)
                 if line.startswith('M6T'):
@@ -43,6 +66,8 @@ def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
                     new_nc_file.append(line)
                 elif line.startswith('ON') and '(' in line:
                     frame_message = ''.join(('(', line.partition('(')[2]))
+                elif line.startswith('M8'):
+                    add_m12 = True
                 if not start_write:
                     buffer_message = line
         nc_size = len(new_nc_file)
@@ -125,6 +150,13 @@ def add_multiple_bumotec_files(path, directory_name, sub_directory_name, file_na
         file.writelines(text)
 
 
+def add_multiple_macodell_files(path, directory_name, sub_directory_name, nc_file, file_name):
+    current_path = os.path.join(
+        path, directory_name, sub_directory_name, file_name)
+    with open(current_path, 'w', encoding='UTF-8') as file:
+        file.writelines(nc_file)
+
+
 def add_one_bumotec_files(path, directory_name, sub_directory_name, file_name, all_nc_files, tools):
     current_path = os.path.join(
         path, directory_name, sub_directory_name, file_name)
@@ -134,6 +166,88 @@ def add_one_bumotec_files(path, directory_name, sub_directory_name, file_name, a
             file.writelines(['\n', '\n'])
             file.writelines(nc_file)
         file.writelines(['M30\n', '%\n'])
+
+
+def add_one_macodell_files(path, directory_name, sub_directory_name, file_name, all_nc_files, tools):
+    current_path = os.path.join(
+        path, directory_name, sub_directory_name, file_name)
+    with open(current_path, 'w', encoding='UTF-8') as file:
+        file.writelines(macodell_head_block(tools))
+        for nc_file in all_nc_files:
+            file.writelines(['\n', '\n'])
+            file.writelines(nc_file)
+        file.writelines(['M30\n', '%\n'])
+
+
+def get_number_after_letter(line, letter):
+    value = letter
+    allow_symbols = '0123456789.-'
+    for symbol in line.partition(letter)[2]:
+        if symbol in allow_symbols:
+            value += symbol
+        else:
+            break
+    return value
+
+
+def from_bumotec_to_macodell(bumotec_block):
+    macodell_block = list()
+    shrink_data = list()
+    write_line = True
+    for pos, line in enumerate(bumotec_block):
+        if line.startswith('M6T'):
+            write_line = False
+        if write_line:
+            macodell_block.append(line)
+            if line.startswith('M8'):
+                macodell_block.pop()
+                macodell_block.append('M8\n')
+            elif line.startswith('M12'):
+                macodell_block.pop()
+                macodell_block.append('M1\n')
+                macodell_block.append('M3\n')
+        else:
+            shrink_data.append(line)
+        if line.startswith('G201'):
+            shrink_data.append(bumotec_block[pos + 1])
+            write_line = True
+    data = {'angle_c': '', 'angle_b': '', 'speed': '', 'tool_num': '',
+            'x_1': '', 'y_1': '', 'z_1': '', 'feed': ''}
+    for line in shrink_data:
+        if line.startswith('M6T'):
+            data['tool_num'] = get_number_after_letter(line, 'T')
+        elif line.startswith('G0C'):
+            data['angle_c'] = get_number_after_letter(line, 'C')
+        elif line.startswith('G201'):
+            data['angle_b'] = get_number_after_letter(line, 'B')
+        elif line.startswith('M3S'):
+            data['speed'] = get_number_after_letter(line, 'S')
+    data['x_1'] = get_number_after_letter(shrink_data[-1], 'X')
+    data['y_1'] = get_number_after_letter(shrink_data[-1], 'Y')
+    data['z_1'] = get_number_after_letter(shrink_data[-1], 'Z')
+    data['feed'] = get_number_after_letter(shrink_data[-1], 'F')
+    new_line = ''.join((data['speed'], '\n'))
+    macodell_block.insert(3, new_line)
+    new_line = ''.join(('G806', data['tool_num'], data['angle_b'], 'H11I#701J#702K#703V1',
+                        data['x_1'], data['y_1'], data['z_1'], data['angle_c'],
+                        'S2000', data['feed'], '\n'))
+    macodell_block.insert(3, new_line)
+    new_line = 'G55\n'
+    macodell_block.insert(3, new_line)
+    delete_symbols = ('M9', 'G69', 'G49', 'M5', 'M53', 'M0', '', '\n', 'M00')
+    size_of_block = len(macodell_block)
+    count = 0
+    while count < size_of_block:
+        if macodell_block[-1].strip() in delete_symbols:
+            macodell_block.pop()
+        else:
+            break
+        count += 1
+    macodell_block.append('M9\n')
+    macodell_block.append('G53Z0M05\n')
+    macodell_block.append('G53B0X0Y0\n')
+    macodell_block.append('M00\n')
+    return macodell_block
 
 
 def make_correct_order(names):
@@ -159,13 +273,15 @@ def main():
     sub_directory_name = 'ONE_FILE', 'ALL'
     one_file_name = 'O1234.NC'
     # current_path = os.path.abspath('')
-    current_path = 'D:\\ПРОГОН\\ЭР.1561\\ЭР.1561-317-21\\4PU\\КАТЯ КАЖДЫЙ'
+    current_path = 'D:\\ПРОГОН\\ЭР.1561\\ЭР.1561-317-21\\4PU\\КАТЯ ФУЛЛ'
     objects_in_folder = get_file_list(current_path)
     if objects_in_folder['nc']:
         create_directories(current_path, directory_name, sub_directory_name)
         all_nc_files = list()
         tools = list()
         objects_in_folder['nc'] = make_correct_order(objects_in_folder['nc'])
+
+        # for BUMOTEC nc files
         for number, nc_file in enumerate(objects_in_folder['nc']):
             frame_num = ''.join(('N', str((number + 2)*10), '\n'))
             correct_file, nc_tool = convert_to_normal_nc_file(
@@ -177,6 +293,16 @@ def main():
         tools = set(tools)
         add_one_bumotec_files(
             current_path, directory_name[0], sub_directory_name[0], one_file_name, all_nc_files, tools)
+
+        # for Macodell nc files
+        for pos, element in enumerate(all_nc_files):
+            all_nc_files[pos] = from_bumotec_to_macodell(element)
+        for pos, block in enumerate(all_nc_files):
+            nc_file_name = objects_in_folder['nc'][pos]
+            add_multiple_macodell_files(
+                current_path, directory_name[1], sub_directory_name[1], block, nc_file_name)
+        add_one_macodell_files(
+            current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
 
 
 main()
