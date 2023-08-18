@@ -1,5 +1,6 @@
 import os
 
+
 def bumotec_head_block(tools):
     head_file_name = 'bumotec_head.txt'
     path = os.path.join(os.path.abspath(''), 'data', head_file_name)
@@ -24,18 +25,26 @@ def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
     try:
         new_nc_file.append(frame_num)
         frame_message = ''
+        buffer_message = ''
         start_write = False
         with open(current_path, 'r', encoding='utf-8') as file:
             for line in file:
                 if start_write:
                     new_nc_file.append(line)
-                if line.startswith('M53'):
+                if line.startswith('M6T'):
+                    if buffer_message.startswith('(T'):
+                        buffer_message = ''.join(
+                            ('(', ' '.join(buffer_message.split()[1:]), '\n'))
+                        tool = buffer_message
                     if not start_write:
                         new_nc_file.append(frame_message)
                     start_write = True
+                    new_nc_file.append(buffer_message)
+                    new_nc_file.append(line)
                 elif line.startswith('ON') and '(' in line:
                     frame_message = ''.join(('(', line.partition('(')[2]))
-
+                if not start_write:
+                    buffer_message = line
         nc_size = len(new_nc_file)
         while nc_size:
             if new_nc_file[-1].strip() in ('\n', '', 'M30', '%'):
@@ -44,14 +53,6 @@ def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
                 new_nc_file.append('M00\n')
                 break
             nc_size -= 1
-        for pos, line in enumerate(new_nc_file):
-            if line.startswith('M6T'):
-                replace_str = new_nc_file[pos-1]
-                if replace_str.startswith('(T'):
-                    replace_str = ''.join(('(', ' '.join(replace_str.split()[1:]), '\n'))
-                    tool = replace_str
-                new_nc_file[pos-1] = replace_str
-                break
 
     except BaseException as exc:
         error_message = f'Обнаружена ошибка при попытке открыть файл {current_path}\n'
@@ -62,7 +63,7 @@ def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
 def get_file_list(path):
     nc_files = list()
     elements_to_delete = list()
-    folders = list()    
+    folders = list()
     try:
         all_files = os.listdir(path)
         for element in all_files:
@@ -76,12 +77,12 @@ def get_file_list(path):
                     elements_to_delete.append(element)
         if not len(nc_files):
             raise Exception
-        
+
     except Exception as exc:
         error_message = f'В папке {path} нет файлов с расширением *.NC\n'
         add_to_error_log(exc, error_message)
 
-    analysis = {'nc':nc_files, 'dir':folders, 'delete':elements_to_delete}
+    analysis = {'nc': nc_files, 'dir': folders, 'delete': elements_to_delete}
     return analysis
 
 
@@ -118,13 +119,15 @@ def add_to_error_log(exc, error):
 
 
 def add_multiple_bumotec_files(path, directory_name, sub_directory_name, file_name, text):
-    current_path = os.path.join(path, directory_name, sub_directory_name, file_name)
+    current_path = os.path.join(
+        path, directory_name, sub_directory_name, file_name)
     with open(current_path, 'w', encoding='UTF-8') as file:
         file.writelines(text)
 
 
 def add_one_bumotec_files(path, directory_name, sub_directory_name, file_name, all_nc_files, tools):
-    current_path = os.path.join(path, directory_name, sub_directory_name, file_name)
+    current_path = os.path.join(
+        path, directory_name, sub_directory_name, file_name)
     with open(current_path, 'w', encoding='UTF-8') as file:
         file.writelines(bumotec_head_block(tools))
         for nc_file in all_nc_files:
@@ -133,25 +136,47 @@ def add_one_bumotec_files(path, directory_name, sub_directory_name, file_name, a
         file.writelines(['M30\n', '%\n'])
 
 
+def make_correct_order(names):
+    new_order = dict()
+    correct_list = list()
+    try:
+        for item in names:
+            short_key = int(item[-5:].replace('_',
+                                              '').replace('.NC', '').replace('.nc', ''))
+            new_order[short_key] = item
+        for key in sorted(new_order.keys()):
+            correct_list.append(new_order[key])
+    except BaseException as exc:
+        error_message = f'Были обраружены проблемы с '
+        f'расширением NC файлов. Проверьте расширения *.NC\n'
+        add_to_error_log(exc, error_message)
+    return correct_list
+
+
 def main():
     file_name = '111.NC'
     directory_name = 'Bumotec', 'Macodell'
     sub_directory_name = 'ONE_FILE', 'ALL'
     one_file_name = 'O1234.NC'
-    current_path = os.path.abspath('')
+    # current_path = os.path.abspath('')
+    current_path = 'D:\\ПРОГОН\\ЭР.1561\\ЭР.1561-317-21\\4PU\\КАТЯ КАЖДЫЙ'
     objects_in_folder = get_file_list(current_path)
     if objects_in_folder['nc']:
         create_directories(current_path, directory_name, sub_directory_name)
         all_nc_files = list()
         tools = list()
+        objects_in_folder['nc'] = make_correct_order(objects_in_folder['nc'])
         for number, nc_file in enumerate(objects_in_folder['nc']):
             frame_num = ''.join(('N', str((number + 2)*10), '\n'))
-            correct_file, nc_tool = convert_to_normal_nc_file(current_path, nc_file, frame_num)
+            correct_file, nc_tool = convert_to_normal_nc_file(
+                current_path, nc_file, frame_num)
             all_nc_files.append(correct_file)
             tools.append(nc_tool)
-            add_multiple_bumotec_files(current_path, directory_name[0], sub_directory_name[1], nc_file, correct_file)
+            add_multiple_bumotec_files(
+                current_path, directory_name[0], sub_directory_name[1], nc_file, correct_file)
         tools = set(tools)
-        add_one_bumotec_files(current_path, directory_name[0], sub_directory_name[0], one_file_name, all_nc_files, tools)
+        add_one_bumotec_files(
+            current_path, directory_name[0], sub_directory_name[0], one_file_name, all_nc_files, tools)
 
 
 main()
