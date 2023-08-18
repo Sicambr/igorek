@@ -1,0 +1,5 @@
+first directory=Bumotec
+second directory=Macodell
+directory name for one big file=ONE_FILE
+directory name for multiple files=ALL
+big file=O1234.NC

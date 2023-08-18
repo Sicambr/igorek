@@ -267,42 +267,57 @@ def make_correct_order(names):
     return correct_list
 
 
+def get_path_from_config():
+    current_path = os.path.join(os.path.abspath(''), 'data', 'config.txt')
+    data = list()
+    try:
+        with open(current_path, 'r', encoding='UTF-8') as file:
+            for line in file:
+                if line.strip() != '':
+                    data.append(line.partition('=')[2].strip())
+    except BaseException as exc:
+        error_message = f'Неверно сохранены данныек внутри config.txt или файл отсутсвует.\n'
+        add_to_error_log(exc, error_message)
+    return data
+
+
 def main():
-    file_name = '111.NC'
-    directory_name = 'Bumotec', 'Macodell'
-    sub_directory_name = 'ONE_FILE', 'ALL'
-    one_file_name = 'O1234.NC'
-    # current_path = os.path.abspath('')
-    current_path = 'D:\\ПРОГОН\\ЭР.1561\\ЭР.1561-317-21\\4PU\\КАТЯ ФУЛЛ'
-    objects_in_folder = get_file_list(current_path)
-    if objects_in_folder['nc']:
-        create_directories(current_path, directory_name, sub_directory_name)
-        all_nc_files = list()
-        tools = list()
-        objects_in_folder['nc'] = make_correct_order(objects_in_folder['nc'])
+    data = get_path_from_config()
+    if data and len(data) == 5:
+        directory_name = (data[0], data[1])
+        sub_directory_name = (data[2], data[3])
+        one_file_name = data[4]
+        current_path = os.path.abspath('')
+        #current_path = 'D:\\ПРОГОН\\ЭР.1561\\ЭР.1561-317-21\\4PU\\КАТЯ ФУЛЛ'
+        objects_in_folder = get_file_list(current_path)
+        if objects_in_folder['nc']:
+            create_directories(current_path, directory_name, sub_directory_name)
+            all_nc_files = list()
+            tools = list()
+            objects_in_folder['nc'] = make_correct_order(objects_in_folder['nc'])
 
-        # for BUMOTEC nc files
-        for number, nc_file in enumerate(objects_in_folder['nc']):
-            frame_num = ''.join(('N', str((number + 2)*10), '\n'))
-            correct_file, nc_tool = convert_to_normal_nc_file(
-                current_path, nc_file, frame_num)
-            all_nc_files.append(correct_file)
-            tools.append(nc_tool)
-            add_multiple_bumotec_files(
-                current_path, directory_name[0], sub_directory_name[1], nc_file, correct_file)
-        tools = set(tools)
-        add_one_bumotec_files(
-            current_path, directory_name[0], sub_directory_name[0], one_file_name, all_nc_files, tools)
+            # for BUMOTEC nc files
+            for number, nc_file in enumerate(objects_in_folder['nc']):
+                frame_num = ''.join(('N', str((number + 2)*10), '\n'))
+                correct_file, nc_tool = convert_to_normal_nc_file(
+                    current_path, nc_file, frame_num)
+                all_nc_files.append(correct_file)
+                tools.append(nc_tool)
+                add_multiple_bumotec_files(
+                    current_path, directory_name[0], sub_directory_name[1], nc_file, correct_file)
+            tools = set(tools)
+            add_one_bumotec_files(
+                current_path, directory_name[0], sub_directory_name[0], one_file_name, all_nc_files, tools)
 
-        # for Macodell nc files
-        for pos, element in enumerate(all_nc_files):
-            all_nc_files[pos] = from_bumotec_to_macodell(element)
-        for pos, block in enumerate(all_nc_files):
-            nc_file_name = objects_in_folder['nc'][pos]
-            add_multiple_macodell_files(
-                current_path, directory_name[1], sub_directory_name[1], block, nc_file_name)
-        add_one_macodell_files(
-            current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
+            # for Macodell nc files
+            for pos, element in enumerate(all_nc_files):
+                all_nc_files[pos] = from_bumotec_to_macodell(element)
+            for pos, block in enumerate(all_nc_files):
+                nc_file_name = objects_in_folder['nc'][pos]
+                add_multiple_macodell_files(
+                    current_path, directory_name[1], sub_directory_name[1], block, nc_file_name)
+            add_one_macodell_files(
+                current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
 
 
 main()
