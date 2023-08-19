@@ -3,7 +3,7 @@ import os
 import to_s191
 
 from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QLineEdit, QAction
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QLineEdit, QAction, QFileDialog
 from PyQt5 import QtWidgets, uic
 from UnIgor import Ui_MainWindow
 
@@ -19,6 +19,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             lambda: self.start_button_pressed())
 
         self.read_log_file.triggered.connect(lambda: self.read_log_file_pressed())
+
+        self.new_explorer = QFileDialog
+        self.change_path.pressed.connect(lambda: self.change_path_pressed())
+
+    def change_path_pressed(self):
+        current_path=self.show_path.text()
+        dir_name = self.new_explorer.getExistingDirectory(directory=current_path)
+        if not dir_name:
+            self.show_path.setText(current_path)
+        else:
+            self.show_path.setText(dir_name)
 
     def read_log_file_pressed(self):
         mistakes_path = os.path.join(os.path.abspath(''), 'error.log')
