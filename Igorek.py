@@ -4,7 +4,7 @@ import to_s191
 
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QLineEdit, QAction, QFileDialog
-from PyQt5 import QtWidgets, uic
+from PyQt5 import QtWidgets, uic, QtGui
 from UnIgor import Ui_MainWindow
 
 
@@ -12,6 +12,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
+        ico = QtGui.QIcon('cnc.ico')
+        self.setWindowIcon(ico)
         current_path = to_s191.load_path()
         self.show_path.setText(current_path)
         
