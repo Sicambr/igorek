@@ -3,3 +3,4 @@ second directory=Macodell
 directory name for one big file=ONE_FILE
 directory name for multiple files=ALL
 big file=O1234.NC
+path=C:\Users\Atopus\PycharmProjects\pythonProject\igorek\CATIA

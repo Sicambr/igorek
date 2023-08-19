@@ -267,7 +267,7 @@ def make_correct_order(names):
     return correct_list
 
 
-def get_path_from_config():
+def get_data_from_config():
     current_path = os.path.join(os.path.abspath(''), 'data', 'config.txt')
     data = list()
     try:
@@ -281,20 +281,48 @@ def get_path_from_config():
     return data
 
 
-def create_path():
-    # current_path = os.path.join(os.path.abspath(''), 'CATIA')
-    current_path = "D:\\ПРОГОН\\ЭР.1561\\ЭР.1561-317-21\\4PU\\КАТЯ ФУЛЛ"
-    return current_path
+def load_path():
+    current_path = os.path.join(os.path.abspath(''), 'data', 'config.txt')
+    data = list()
+    try:
+        with open(current_path, 'r', encoding='UTF-8') as file:
+            for line in file:
+                if line.strip() != '':
+                    data.append(line.partition('=')[2].strip())
+        current_path = data[5]
+        if not os.path.exists(current_path):
+            current_path = os.path.join(os.path.abspath(''), 'CATIA')
+    except BaseException as exc:
+        current_path = os.path.join(os.path.abspath(''), 'CATIA')
+        error_message = f'Неверно сохранены данные внутри config.txt или файл отсутсвует.\n'
+        add_to_error_log(exc, error_message)
+    return current_path    
 
 
-def main(current_path=None):
-    data = get_path_from_config()
-    if data and len(data) == 5:
+
+def save_path(last_path):
+    current_path = os.path.join(os.path.abspath(''), 'data', 'config.txt')
+    try:
+        data = list()
+        with open(current_path, 'r', encoding='UTF-8') as read_file:
+            for line in read_file:
+                data.append(line)
+        with open(current_path, 'w', encoding='UTF-8') as write_file:
+            write_file.writelines(data[:-1])
+            new_path = ''.join(('path=', last_path))
+            write_file.writelines(new_path)
+    except BaseException as exc:
+        error_message = f'Ошибка при попытке сохранить новый путь в файл config.txt.\n'
+        add_to_error_log(exc, error_message)
+    return data
+
+
+def main(current_path):
+    data = get_data_from_config()
+    if data and len(data) == 6:
         directory_name = (data[0], data[1])
         sub_directory_name = (data[2], data[3])
         one_file_name = data[4]
-        if not current_path:
-            current_path = os.path.join(os.path.abspath(''), 'CATIA')
         objects_in_folder = get_file_list(current_path)
         if objects_in_folder['nc']:
             create_directories(current_path, directory_name,

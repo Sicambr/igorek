@@ -12,19 +12,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
-        current_path = to_s191.create_path()
+        current_path = to_s191.load_path()
         self.show_path.setText(current_path)
         self.start_button.pressed.connect(
             lambda: self.start_button_pressed(current_path))
-        # buttn = QLabel()
-        # buttn.setText
+
 
     def start_button_pressed(self, current_path):
         self.status_label.setText(
             'В работе по созданию новых .NC файлов. Ждем...')
         to_s191.main(current_path)
+        to_s191.save_path(current_path)
         self.status_label.setText(
             'Файлы для Bumotec и Macodell успешно собраны.')
+        
 
 
 app = QApplication(sys.argv)
