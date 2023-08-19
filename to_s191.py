@@ -281,20 +281,28 @@ def get_path_from_config():
     return data
 
 
-def main():
+def create_path():
+    # current_path = os.path.join(os.path.abspath(''), 'CATIA')
+    current_path = "D:\\ПРОГОН\\ЭР.1561\\ЭР.1561-317-21\\4PU\\КАТЯ ФУЛЛ"
+    return current_path
+
+
+def main(current_path=None):
     data = get_path_from_config()
     if data and len(data) == 5:
         directory_name = (data[0], data[1])
         sub_directory_name = (data[2], data[3])
         one_file_name = data[4]
-        current_path = os.path.abspath('')
-        #current_path = 'D:\\ПРОГОН\\ЭР.1561\\ЭР.1561-317-21\\4PU\\КАТЯ ФУЛЛ'
+        if not current_path:
+            current_path = os.path.join(os.path.abspath(''), 'CATIA')
         objects_in_folder = get_file_list(current_path)
         if objects_in_folder['nc']:
-            create_directories(current_path, directory_name, sub_directory_name)
+            create_directories(current_path, directory_name,
+                               sub_directory_name)
             all_nc_files = list()
             tools = list()
-            objects_in_folder['nc'] = make_correct_order(objects_in_folder['nc'])
+            objects_in_folder['nc'] = make_correct_order(
+                objects_in_folder['nc'])
 
             # for BUMOTEC nc files
             for number, nc_file in enumerate(objects_in_folder['nc']):
@@ -318,6 +326,3 @@ def main():
                     current_path, directory_name[1], sub_directory_name[1], block, nc_file_name)
             add_one_macodell_files(
                 current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
-
-
-main()
