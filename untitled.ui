@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>818</width>
-    <height>234</height>
+    <width>933</width>
+    <height>280</height>
    </rect>
   </property>
   <property name="font">
@@ -22,8 +22,8 @@
    <widget class="QLabel" name="title_lable">
     <property name="geometry">
      <rect>
-      <x>260</x>
-      <y>0</y>
+      <x>310</x>
+      <y>50</y>
       <width>271</width>
       <height>31</height>
      </rect>
@@ -36,8 +36,8 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>40</y>
-      <width>801</width>
+      <y>90</y>
+      <width>901</width>
       <height>61</height>
      </rect>
     </property>
@@ -57,8 +57,8 @@
    <widget class="QPushButton" name="start_button">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>120</y>
+      <x>10</x>
+      <y>170</y>
       <width>121</width>
       <height>41</height>
      </rect>
@@ -70,14 +70,27 @@
    <widget class="QLabel" name="status_label">
     <property name="geometry">
      <rect>
-      <x>166</x>
-      <y>120</y>
-      <width>631</width>
+      <x>150</x>
+      <y>170</y>
+      <width>771</width>
       <height>41</height>
      </rect>
     </property>
     <property name="text">
      <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>70</x>
+      <y>0</y>
+      <width>791</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Программа для сборки *.NC файлов. Постпроцессоры: Bumotec S191v2.1, Macodell S7v.2</string>
     </property>
    </widget>
   </widget>
@@ -86,15 +99,15 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>818</width>
+     <width>933</width>
      <height>31</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
     <property name="title">
-     <string>Настройка</string>
+     <string>Управление</string>
     </property>
-    <addaction name="action_NC"/>
+    <addaction name="read_log_file"/>
    </widget>
    <addaction name="menu"/>
   </widget>
@@ -104,9 +117,14 @@
     <string>открыть</string>
    </property>
   </action>
-  <action name="action_NC">
+  <action name="read_log_file">
    <property name="text">
-    <string>Настройка пути с *.NC</string>
+    <string>Посмотреть error.log</string>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+    </font>
    </property>
   </action>
  </widget>

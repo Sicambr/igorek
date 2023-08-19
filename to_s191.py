@@ -318,11 +318,19 @@ def save_path(last_path):
 
 
 def main(current_path):
+    # Clear an error.log file before run main script
+    mistakes_path = os.path.join(os.path.abspath(''), 'error.log')
+    if os.path.exists(mistakes_path):
+        os.remove(mistakes_path)
+    
+    # Load parametrs from data/config.txt
     data = get_data_from_config()
     if data and len(data) == 6:
         directory_name = (data[0], data[1])
         sub_directory_name = (data[2], data[3])
         one_file_name = data[4]
+
+        # Create list of files and directories in work folder
         objects_in_folder = get_file_list(current_path)
         if objects_in_folder['nc']:
             create_directories(current_path, directory_name,
@@ -354,3 +362,10 @@ def main(current_path):
                     current_path, directory_name[1], sub_directory_name[1], block, nc_file_name)
             add_one_macodell_files(
                 current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
+
+    # Check if error.log exist in work folder
+    without_mistakes = 0
+    if os.path.exists(mistakes_path):
+        without_mistakes = 1
+    return without_mistakes
+
