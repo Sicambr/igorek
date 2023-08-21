@@ -1,5 +1,7 @@
 import os
 import datetime
+# W508S_v7.1
+# S191_v8.2
 
 
 def bumotec_head_block(tools):
@@ -38,6 +40,21 @@ def macodell_head_block(tools):
     return head_text
 
 
+def get_normal_num_t(line):
+    t_number = ''
+    line_without_t_number = line
+    allow_symbols = '01213456789 '
+    for symbol in line[2:]:
+        if symbol in allow_symbols:
+            t_number += symbol
+        else:
+            break
+    if len(t_number) > 0:
+        t_number = ''.join(('(T', t_number))
+        line_without_t_number = ''.join(('(', (line.partition(t_number)[2])))
+    return line_without_t_number
+
+
 def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
     current_path = os.path.join(path_to_folder, file_name)
     new_nc_file = list()
@@ -48,24 +65,31 @@ def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
         buffer_message = ''
         start_write = False
         add_m12 = False
+        check_next_line = False
         with open(current_path, 'r', encoding='utf-8') as file:
             for line in file:
                 if line.startswith('(') and add_m12:
                     new_nc_file.append('M12\n')
                 if start_write:
                     new_nc_file.append(line)
+                if check_next_line:
+                    if line.startswith('('):
+                        frame_message = line
+                        check_next_line = False
                 if line.startswith('M6T'):
                     if buffer_message.startswith('(T'):
-                        buffer_message = ''.join(
-                            ('(', ' '.join(buffer_message.split()[1:]), '\n'))
+                        buffer_message = get_normal_num_t(buffer_message)
                         tool = buffer_message
                     if not start_write:
                         new_nc_file.append(frame_message)
                     start_write = True
                     new_nc_file.append(buffer_message)
                     new_nc_file.append(line)
-                elif line.startswith('ON') and '(' in line:
-                    frame_message = ''.join(('(', line.partition('(')[2]))
+                elif line.startswith('ON'):
+                    if '(' in line:
+                        frame_message = ''.join(('(', line.partition('(')[2]))
+                    else:
+                        check_next_line = True
                 elif line.startswith('M8'):
                     add_m12 = True
                 if not start_write:
@@ -296,8 +320,7 @@ def load_path():
         current_path = os.path.join(os.path.abspath(''), 'CATIA')
         error_message = f'Неверно сохранены данные внутри config.txt или файл отсутсвует.\n'
         add_to_error_log(exc, error_message)
-    return current_path    
-
+    return current_path
 
 
 def save_path(last_path):
@@ -322,7 +345,7 @@ def main(current_path):
     mistakes_path = os.path.join(os.path.abspath(''), 'error.log')
     if os.path.exists(mistakes_path):
         os.remove(mistakes_path)
-    
+
     # Load parametrs from data/config.txt
     data = get_data_from_config()
     if data and len(data) == 6:
@@ -368,4 +391,3 @@ def main(current_path):
     if os.path.exists(mistakes_path):
         without_mistakes = 1
     return without_mistakes
-
