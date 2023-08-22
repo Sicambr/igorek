@@ -277,7 +277,7 @@ def get_number_after_letter(line, letter):
     return value
 
 
-def from_bumotec_to_macodell(bumotec_block):
+def from_bumotec_to_macodell(bumotec_block, pos):
     all_blocks = list()
     main_pos = -1
     on_g802 = False
@@ -295,6 +295,7 @@ def from_bumotec_to_macodell(bumotec_block):
     full_block.append('G53Z0M05\n')
     full_block.append('G53B0X0Y0\n')
     full_block.append('M00\n')
+    full_block[0] = ''.join(('N', str(pos * 10), '\n'))
     return full_block
 
 
@@ -477,7 +478,7 @@ def main(current_path):
 
             # for Macodell nc files
             for pos, element in enumerate(all_nc_files):
-                all_nc_files[pos] = from_bumotec_to_macodell(element)
+                all_nc_files[pos] = from_bumotec_to_macodell(element, pos + 2)
             for pos, block in enumerate(all_nc_files):
                 nc_file_name = objects_in_folder['nc'][pos]
                 add_multiple_macodell_files(
