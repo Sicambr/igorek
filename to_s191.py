@@ -1,7 +1,5 @@
 import os
 import datetime
-# W508S_v7.1
-# S191_v8.2
 
 
 def bumotec_head_block(tools):
@@ -56,16 +54,19 @@ def get_normal_num_t(line):
 
 
 def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
+    data = {'angle_c': '', 'angle_b': '', 'speed': '', 'tool_num': '',
+            'tool_mes': '', 'frame_mes': '', 'number': ''}
     current_path = os.path.join(path_to_folder, file_name)
     new_nc_file = list()
     tool = ''
     try:
-        new_nc_file.append(frame_num)
+        new_nc_file.append(''.join(('N', str(frame_num*10), '\n')))
         frame_message = ''
         buffer_message = ''
         start_write = False
         add_m12 = False
         check_next_line = False
+        count_g201 = 0
         with open(current_path, 'r', encoding='utf-8') as file:
             for line in file:
                 if line.startswith('(') and add_m12:
@@ -77,14 +78,19 @@ def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
                         frame_message = line
                         check_next_line = False
                 if line.startswith('M6T'):
+                    data['tool_num'] = get_number_after_letter(line, 'T')
                     if buffer_message.startswith('(T'):
                         buffer_message = get_normal_num_t(buffer_message)
                         tool = buffer_message
+                        data['tool_mes'] = buffer_message
                     if not start_write:
+                        data['frame_mes'] = frame_message
                         new_nc_file.append(frame_message)
                     start_write = True
                     new_nc_file.append(buffer_message)
                     new_nc_file.append(line)
+                elif line.startswith('M3S'):
+                    data['speed'] = get_number_after_letter(line, 'S')
                 elif line.startswith('ON'):
                     if '(' in line:
                         frame_message = ''.join(('(', line.partition('(')[2]))
@@ -92,6 +98,10 @@ def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
                         check_next_line = True
                 elif line.startswith('M8'):
                     add_m12 = True
+                elif line.startswith('G201'):
+                    count_g201 += 1
+                    if count_g201 == 1:
+                        data['angle_b'] = get_number_after_letter(line, 'B')
                 if not start_write:
                     buffer_message = line
         nc_size = len(new_nc_file)
@@ -103,10 +113,63 @@ def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
                 break
             nc_size -= 1
 
+        if count_g201 > 1:
+            write_line = True
+            multiple_nc_file = list()
+            miss_symbols = ('G69', 'G49', 'G0C', 'G201', '(')
+            for index, line in enumerate(new_nc_file):
+                if line.startswith('M12') and new_nc_file[index + 2].startswith(miss_symbols):
+                    multiple_nc_file.append('M9\n')
+                    multiple_nc_file.append('G69\n')
+                    multiple_nc_file.append('G49\n')
+                    multiple_nc_file.append('M5\n')
+                    multiple_nc_file.append('M53\n')
+                    multiple_nc_file.append('M00\n')
+                    multiple_nc_file.append('\n')
+                    multiple_nc_file.append('\n')
+                    frame_num += 1
+                    multiple_nc_file.append(
+                        ''.join(('N', str(frame_num*10), '\n')))
+                    multiple_nc_file.append(data['frame_mes'])
+                    multiple_nc_file.append(data['tool_mes'])
+                    temp_mes = ''.join(('M6', data['tool_num'], 'H0B0\n'))
+                    multiple_nc_file.append(temp_mes)
+                    write_line = False
+                else:
+                    if write_line:
+                        multiple_nc_file.append(line)
+                    else:
+                        if line.startswith('G0C'):
+                            data['angle_c'] = get_number_after_letter(
+                                line, 'C')
+                            temp_mes = ''.join((data['frame_mes'].partition(')')[
+                                               0], ' ', data['angle_c'], ')\n'))
+                            mul_index = len(multiple_nc_file) - 4
+                            multiple_nc_file[mul_index] = temp_mes
+                        elif line.startswith('('):
+                            multiple_nc_file.append(line)
+                        elif not line.startswith(miss_symbols):
+                            multiple_nc_file.append(
+                                ''.join(('M3', data['speed'], '\n')))
+                            multiple_nc_file.append(
+                                ''.join(('G0', data['angle_c'], '\n')))
+                            multiple_nc_file.append('G211\n')
+                            multiple_nc_file.append(
+                                ''.join(('G0X60Y0Z100', data['angle_b'], '\n')))
+                            multiple_nc_file.append('G49\n')
+                            multiple_nc_file.append(
+                                ''.join(('G201X0Y0Z0', data['angle_b'], 'I#510J#511K#512\n')))
+                            multiple_nc_file.append(line)
+                            multiple_nc_file.append('M8M138\n')
+                            write_line = True
     except BaseException as exc:
         error_message = f'Обнаружена ошибка при попытке открыть файл {current_path}\n'
         add_to_error_log(exc, error_message)
-    return new_nc_file, tool
+    frame_num += 1
+    if count_g201 <= 1:
+        return new_nc_file, tool, frame_num
+    else:
+        return multiple_nc_file, tool, frame_num
 
 
 def get_file_list(path):
@@ -215,6 +278,27 @@ def get_number_after_letter(line, letter):
 
 
 def from_bumotec_to_macodell(bumotec_block):
+    all_blocks = list()
+    main_pos = -1
+    on_g802 = False
+    full_block = list()
+    for element in bumotec_block:
+        if element.startswith('N'):
+            all_blocks.append(list())
+            main_pos += 1
+        all_blocks[main_pos].append(element)
+    for index, item in enumerate(all_blocks):
+        if index == 1:
+            on_g802 = True
+        full_block.extend(add_multi_angles_in_one_file(item, on_g802))
+    full_block.append('M9\n')
+    full_block.append('G53Z0M05\n')
+    full_block.append('G53B0X0Y0\n')
+    full_block.append('M00\n')
+    return full_block
+
+
+def add_multi_angles_in_one_file(bumotec_block, on_g802=False):
     macodell_block = list()
     shrink_data = list()
     write_line = True
@@ -225,7 +309,8 @@ def from_bumotec_to_macodell(bumotec_block):
             macodell_block.append(line)
             if line.startswith('M8'):
                 macodell_block.pop()
-                macodell_block.append('M8\n')
+                if not on_g802:
+                    macodell_block.append('M8\n')
             elif line.startswith('M12'):
                 macodell_block.pop()
                 macodell_block.append('M1\n')
@@ -236,10 +321,12 @@ def from_bumotec_to_macodell(bumotec_block):
             shrink_data.append(bumotec_block[pos + 1])
             write_line = True
     data = {'angle_c': '', 'angle_b': '', 'speed': '', 'tool_num': '',
-            'x_1': '', 'y_1': '', 'z_1': '', 'feed': ''}
-    for line in shrink_data:
+            'x_1': '', 'y_1': '', 'z_1': '', 'feed': '', 'special_str': '\n'}
+    for index, line in enumerate(shrink_data):
         if line.startswith('M6T'):
             data['tool_num'] = get_number_after_letter(line, 'T')
+            if shrink_data[index + 1].startswith('('):
+                data['special_str'] = shrink_data[index + 1]
         elif line.startswith('G0C'):
             data['angle_c'] = get_number_after_letter(line, 'C')
         elif line.startswith('G201'):
@@ -250,15 +337,25 @@ def from_bumotec_to_macodell(bumotec_block):
     data['y_1'] = get_number_after_letter(shrink_data[-1], 'Y')
     data['z_1'] = get_number_after_letter(shrink_data[-1], 'Z')
     data['feed'] = get_number_after_letter(shrink_data[-1], 'F')
-    new_line = ''.join((data['speed'], '\n'))
-    macodell_block.insert(3, new_line)
-    new_line = ''.join(('G806', data['tool_num'], data['angle_b'], 'H11I#701J#702K#703V1',
-                        data['x_1'], data['y_1'], data['z_1'], data['angle_c'],
-                        'S2000', data['feed'], '\n'))
-    macodell_block.insert(3, new_line)
-    new_line = 'G55\n'
-    macodell_block.insert(3, new_line)
-    delete_symbols = ('M9', 'G69', 'G49', 'M5', 'M53', 'M0', '', '\n', 'M00')
+    if not on_g802:
+        new_line = ''.join((data['speed'], '\n'))
+        macodell_block.insert(3, new_line)
+    if not on_g802:
+        new_line = ''.join(('G806', data['tool_num'], data['angle_b'], 'H11I#701J#702K#703V1',
+                            data['x_1'], data['y_1'], data['z_1'], data['angle_c'],
+                            'S2000', data['feed'], '\n'))
+        macodell_block.insert(3, new_line)
+    else:
+        macodell_block.pop(2)
+        new_line = ''.join(('G802', data['angle_b'], 'H11I#701J#702K#703V1',
+                            data['x_1'], data['y_1'], data['z_1'], data['angle_c'],
+                            data['feed'], '\n'))
+        macodell_block.insert(2, new_line)
+    if not on_g802:
+        new_line = 'G55\n'
+        macodell_block.insert(3, new_line)
+    delete_symbols = ('M9', 'G69', 'G49', 'M5',
+                      'M53', 'M0', '', '\n', 'M00')
     size_of_block = len(macodell_block)
     count = 0
     while count < size_of_block:
@@ -267,10 +364,12 @@ def from_bumotec_to_macodell(bumotec_block):
         else:
             break
         count += 1
-    macodell_block.append('M9\n')
-    macodell_block.append('G53Z0M05\n')
-    macodell_block.append('G53B0X0Y0\n')
-    macodell_block.append('M00\n')
+    if on_g802:
+        macodell_block[0] = 'M3\n'
+        macodell_block.insert(1, '\n')
+        macodell_block.insert(0, 'M1\n')
+        macodell_block.insert(0, '\n')
+        macodell_block.insert(5, data['special_str'])
     return macodell_block
 
 
@@ -364,9 +463,9 @@ def main(current_path):
                 objects_in_folder['nc'])
 
             # for BUMOTEC nc files
+            frame_num = 2
             for number, nc_file in enumerate(objects_in_folder['nc']):
-                frame_num = ''.join(('N', str((number + 2)*10), '\n'))
-                correct_file, nc_tool = convert_to_normal_nc_file(
+                correct_file, nc_tool, frame_num = convert_to_normal_nc_file(
                     current_path, nc_file, frame_num)
                 all_nc_files.append(correct_file)
                 tools.append(nc_tool)
