@@ -16,7 +16,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>IGOREK</string>
+   <string>IGOREK_v1.1</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QLabel" name="title_lable">
@@ -83,14 +83,14 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>70</x>
+      <x>120</x>
       <y>0</y>
-      <width>791</width>
+      <width>711</width>
       <height>51</height>
      </rect>
     </property>
     <property name="text">
-     <string>Программа для сборки *.NC файлов. Постпроцессоры: Bumotec S191v2.1, Macodell S7v.2</string>
+     <string>Программа для сборки *.NC файлов. Постпроцессоры: S191_v8.2,  W508S_v7.1</string>
     </property>
    </widget>
   </widget>
