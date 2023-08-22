@@ -53,7 +53,7 @@ def get_normal_num_t(line):
     return line_without_t_number
 
 
-def convert_to_normal_nc_file(path_to_folder, file_name, frame_num):
+def convert_bumotec_to_normal_nc_file(path_to_folder, file_name, frame_num):
     data = {'angle_c': '', 'angle_b': '', 'speed': '', 'tool_num': '',
             'tool_mes': '', 'frame_mes': '', 'number': ''}
     current_path = os.path.join(path_to_folder, file_name)
@@ -440,6 +440,93 @@ def save_path(last_path):
     return data
 
 
+def check_type_nc(path_to_folder, file_name):
+    type_machine = 1
+    current_path = os.path.join(path_to_folder, file_name)
+    try:
+        with open(current_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                if line.startswith('G201'):
+                    type_machine = 1
+                    break
+                elif line.startswith('G806'):
+                    type_machine = 0
+                    break
+    except BaseException as exc:
+        error_message = f'Ошибка при попытке открыть файл {file_name} в папке {path_to_folder}.\n'
+        add_to_error_log(exc, error_message)
+    return type_machine
+
+
+def convert_macodell_to_normal_nc_file(path_to_folder, file_name, number):
+    data = {'angle_c': '', 'tool_mes': '', 'frame_mes': '', 'speed': ''}
+    current_path = os.path.join(path_to_folder, file_name)
+    new_nc_file = list()
+    tool = ''
+    try:
+        new_nc_file.append(''.join(('N', str(number*10), '\n')))
+        start_write = False
+        can_add_M1 = False
+        shrink_head = list()
+        with open(current_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                if line.startswith('ON') and '(' in line:
+                    temp_line = ''.join(('(', line.partition('(')[2]))
+                    shrink_head.append(temp_line)
+                elif line.startswith('('):
+                    if line not in shrink_head:
+                        shrink_head.append(line)
+                elif line.startswith('G55'):
+                    new_nc_file.extend(shrink_head)
+                    data['frame_mes'] = shrink_head[0]
+                    data['tool_mes'] = shrink_head[-1]
+                    tool = shrink_head[-1]
+                    start_write = True
+                if start_write:
+                    new_nc_file.append(line)
+                    if line.startswith('G806'):
+                        if 'V1' not in line:
+                            fix_g806 = ''.join(
+                                (line.partition('#703')[0], '#703V1', line.partition('#703')[2]))
+                            new_nc_file.pop()
+                            new_nc_file.append(fix_g806)
+                    elif line.startswith('G802'):
+                        data['speed'] = get_number_after_letter(line, 'S')
+                        fix_g802 = ''.join(
+                            (line.partition(data['speed'])[0], line.partition(data['speed'])[2]))
+                        if 'V1' not in fix_g802:
+                            fix_g802 = ''.join(
+                                (fix_g802.partition('#703')[0], '#703V1', line.partition('#703')[2]))
+                        new_nc_file.pop()
+                        new_nc_file.append(fix_g802)
+                        data['angle_c'] = get_number_after_letter(line, 'C')
+                        temp_mes = ''.join((data['frame_mes'].partition(')')[
+                                           0], ' ', data['angle_c'], ')\n'))
+                        position = len(new_nc_file) - 2
+                        new_nc_file.insert(position, temp_mes)
+                    elif line.startswith('S'):
+                        can_add_M1 = True
+                    elif line.startswith('(') and can_add_M1:
+                        position = len(new_nc_file) - 1
+                        new_nc_file.insert(position, '\n')
+                        new_nc_file.insert(position, 'M3\n')
+                        new_nc_file.insert(position, 'M1\n')
+                        new_nc_file.insert(position, '\n')
+            delete_symbols = ('M30', '%', '', '\n', ' ')
+            size_of_sequence = len(new_nc_file)
+            count = 0
+            while count < size_of_sequence:
+                if new_nc_file[-1].strip() in delete_symbols:
+                    new_nc_file.pop()
+                else:
+                    break
+                count += 1
+    except BaseException as exc:
+        error_message = f'Ошибка при попытке преобразования файла {file_name} в папке {path_to_folder}.\n'
+        add_to_error_log(exc, error_message)
+    return new_nc_file, tool
+
+
 def main(current_path):
     # Clear an error.log file before run main script
     mistakes_path = os.path.join(os.path.abspath(''), 'error.log')
@@ -463,28 +550,51 @@ def main(current_path):
             objects_in_folder['nc'] = make_correct_order(
                 objects_in_folder['nc'])
 
-            # for BUMOTEC nc files
-            frame_num = 2
-            for number, nc_file in enumerate(objects_in_folder['nc']):
-                correct_file, nc_tool, frame_num = convert_to_normal_nc_file(
-                    current_path, nc_file, frame_num)
-                all_nc_files.append(correct_file)
-                tools.append(nc_tool)
-                add_multiple_bumotec_files(
-                    current_path, directory_name[0], sub_directory_name[1], nc_file, correct_file)
-            tools = set(tools)
-            add_one_bumotec_files(
-                current_path, directory_name[0], sub_directory_name[0], one_file_name, all_nc_files, tools)
+            # type = 1 - Bumotec, type = 0 - Macodell
+            type_machine = 1
+            for nc_file in objects_in_folder['nc']:
+                type_machine = check_type_nc(current_path, nc_file)
+                break
 
-            # for Macodell nc files
-            for pos, element in enumerate(all_nc_files):
-                all_nc_files[pos] = from_bumotec_to_macodell(element, pos + 2)
-            for pos, block in enumerate(all_nc_files):
-                nc_file_name = objects_in_folder['nc'][pos]
-                add_multiple_macodell_files(
-                    current_path, directory_name[1], sub_directory_name[1], block, nc_file_name)
-            add_one_macodell_files(
-                current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
+            # TYPE MACHINE: BUMOTEC
+            if type_machine:
+                # for BUMOTEC nc files
+                frame_num = 2
+                for number, nc_file in enumerate(objects_in_folder['nc']):
+                    correct_file, nc_tool, frame_num = convert_bumotec_to_normal_nc_file(
+                        current_path, nc_file, frame_num)
+                    all_nc_files.append(correct_file)
+                    tools.append(nc_tool)
+                    add_multiple_bumotec_files(
+                        current_path, directory_name[0], sub_directory_name[1], nc_file, correct_file)
+                tools = set(tools)
+                add_one_bumotec_files(
+                    current_path, directory_name[0], sub_directory_name[0], one_file_name, all_nc_files, tools)
+
+                # for Macodell nc files
+                for pos, element in enumerate(all_nc_files):
+                    all_nc_files[pos] = from_bumotec_to_macodell(
+                        element, pos + 2)
+                for pos, block in enumerate(all_nc_files):
+                    nc_file_name = objects_in_folder['nc'][pos]
+                    add_multiple_macodell_files(
+                        current_path, directory_name[1], sub_directory_name[1], block, nc_file_name)
+                add_one_macodell_files(
+                    current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
+
+            # TYPE MACHINE: MACODELL
+            else:
+                # for Macodell nc files
+                for number, nc_file in enumerate(objects_in_folder['nc']):
+                    correct_file, nc_tool = convert_macodell_to_normal_nc_file(
+                        current_path, nc_file, number + 2)
+                    all_nc_files.append(correct_file)
+                    tools.append(nc_tool)
+                    add_multiple_macodell_files(
+                        current_path, directory_name[1], sub_directory_name[1], correct_file, nc_file)
+                # tools = set(tools)
+                # add_one_bumotec_files(
+                #     current_path, directory_name[0], sub_directory_name[0], one_file_name, all_nc_files, tools)
 
     # Check if error.log exist in work folder
     without_mistakes = 0
