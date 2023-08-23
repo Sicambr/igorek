@@ -15,7 +15,7 @@ def bumotec_head_block(tools):
             head_text[4] = ''.join(('(', str(datetime.date.today()), ')\n'))
     except BaseException as exc:
         error_message = f'Попытка открыть {path} провалилась. '
-        f'Проверьте наличие {head_file_name} на указанном пути.\n'
+        error_message += f'Проверьте наличие {head_file_name} на указанном пути.\n'
         add_to_error_log(exc, error_message)
     return head_text
 
@@ -33,7 +33,7 @@ def macodell_head_block(tools):
             head_text[4] = ''.join(('(', str(datetime.date.today()), ')\n'))
     except BaseException as exc:
         error_message = f'Попытка открыть {path} провалилась. '
-        f'Проверьте наличие {head_file_name} на указанном пути.\n'
+        error_message += f'Проверьте наличие {head_file_name} на указанном пути.\n'
         add_to_error_log(exc, error_message)
     return head_text
 
@@ -277,6 +277,102 @@ def get_number_after_letter(line, letter):
     return value
 
 
+def from_macodell_to_bumotec(macodel_block, frame_num, file_name):
+    data = {'angle_c': '', 'angle_b': '', 'speed': '', 'tool_num': '',
+            'x_1': '', 'y_1': '', 'z_1': '', 'feed': '', 'head_mes': '\n',
+            'tool_mes': ''}
+    bumotec_block = list()
+    bumotec_block.append(''.join(('N', str(frame_num * 10), '\n')))
+    not_allowed_symbols = ('G55', 'G806', 'G802', 'M1', 'M3', 'S', 'M9')
+    try:
+        data['head_mes'] = macodel_block[1]
+        for index, line in enumerate(macodel_block[1:]):
+            if not line.startswith(not_allowed_symbols):
+                bumotec_block.append(line)
+            if line.startswith('M9'):
+                break
+            if line.startswith('M1'):
+                bumotec_block.append('M12\n')
+            if line.startswith('M8'):
+                bumotec_block.pop()
+                bumotec_block.append('M8M138\n')
+            if line.startswith('G806'):
+                data['x_1'] = get_number_after_letter(line, 'X')
+                data['y_1'] = get_number_after_letter(line, 'Y')
+                data['z_1'] = get_number_after_letter(line, 'Z')
+                data['feed'] = get_number_after_letter(line, 'F')
+                data['angle_c'] = get_number_after_letter(line, 'C')
+                data['angle_b'] = get_number_after_letter(line, 'B')
+                data['speed'] = get_number_after_letter(line, 'S')
+                for i in range(1, 4):
+                    if macodel_block[index + i].startswith('S'):
+                        data['speed'] = get_number_after_letter(
+                            macodel_block[index + i], 'S')
+                        break
+                data['tool_num'] = get_number_after_letter(line, 'T')
+                data['tool_mes'] = macodel_block[index - 1]
+
+                temp_mes = list()
+                temp_mes.append(''.join(('M6', data['tool_num'], 'H0B0\n')))
+                temp_mes.append(''.join(('M3', data['speed'], '\n')))
+                temp_mes.append(''.join(('G0', data['angle_c'], '\n')))
+                if int(float(data['angle_b'].partition('B')[2])) != 0:
+                    temp_mes.append('G211\n')
+                    temp_mes.append(
+                        ''.join(('G0X60Y0Z100', data['angle_b'], '\n')))
+                    temp_mes.append('G49\n')
+                temp_mes.append(
+                    ''.join(('G201X0Y0Z0', data['angle_b'], 'I#510J#511K#512\n')))
+                temp_mes.append(
+                    ''.join(('G1', data['x_1'], data['y_1'], data['z_1'], data['feed'], '\n')))
+                bumotec_block.extend(temp_mes)
+            elif line.startswith('G802'):
+                data['x_1'] = get_number_after_letter(line, 'X')
+                data['y_1'] = get_number_after_letter(line, 'Y')
+                data['z_1'] = get_number_after_letter(line, 'Z')
+                data['feed'] = get_number_after_letter(line, 'F')
+                data['angle_c'] = get_number_after_letter(line, 'C')
+                data['angle_b'] = get_number_after_letter(line, 'B')
+                temp_mes = list()
+                temp_mes.append(''.join(('M6', data['tool_num'], 'H0B0\n')))
+                temp_mes.append(''.join(('M3', data['speed'], '\n')))
+                temp_mes.append(''.join(('G0', data['angle_c'], '\n')))
+                if int(float(data['angle_b'].partition('B')[2])) != 0:
+                    temp_mes.append('G211\n')
+                    temp_mes.append(
+                        ''.join(('G0X60Y0Z100', data['angle_b'], '\n')))
+                    temp_mes.append('G49\n')
+                temp_mes.append(
+                    ''.join(('G201X0Y0Z0', data['angle_b'], 'I#510J#511K#512\n')))
+                temp_mes.append(
+                    ''.join(('G1', data['x_1'], data['y_1'], data['z_1'], data['feed'], '\n')))
+                delete_pos = len(bumotec_block) - 1
+                bumotec_block.pop(delete_pos - 3)
+                frame_num += 1
+                bumotec_block.insert((delete_pos - 1), data['tool_mes'])
+                bumotec_block.insert(
+                    (delete_pos - 2), (''.join(('N', str(frame_num * 10), '\n'))))
+                bumotec_block.insert((delete_pos - 4), 'M00\n')
+                bumotec_block.insert((delete_pos - 4), 'M53\n')
+                bumotec_block.insert((delete_pos - 4), 'M5\n')
+                bumotec_block.insert((delete_pos - 4), 'G49\n')
+                bumotec_block.insert((delete_pos - 4), 'G69\n')
+                bumotec_block.insert((delete_pos - 4), 'M9\n')
+                bumotec_block.extend(temp_mes)
+        bumotec_block.append('M9\n')
+        bumotec_block.append('G69\n')
+        bumotec_block.append('G49\n')
+        bumotec_block.append('M5\n')
+        bumotec_block.append('M53\n')
+        bumotec_block.append('M00\n')
+    except BaseException as exc:
+        error_message = f'Найдена проблема в файле {file_name}.'
+        error_message += f' Файл либо пустой, либо сгенерирован CATIA неправильно.\n'
+        add_to_error_log(exc, error_message)
+    frame_num += 1
+    return bumotec_block, frame_num
+
+
 def from_bumotec_to_macodell(bumotec_block, pos):
     all_blocks = list()
     main_pos = -1
@@ -386,7 +482,7 @@ def make_correct_order(names):
             correct_list.append(new_order[key])
     except BaseException as exc:
         error_message = f'Были обраружены проблемы с '
-        f'расширением NC файлов. Проверьте расширения *.NC\n'
+        error_message += f'расширением NC файлов. Проверьте расширения *.NC\n'
         add_to_error_log(exc, error_message)
     return correct_list
 
@@ -496,7 +592,7 @@ def convert_macodell_to_normal_nc_file(path_to_folder, file_name, number):
                             (line.partition(data['speed'])[0], line.partition(data['speed'])[2]))
                         if 'V1' not in fix_g802:
                             fix_g802 = ''.join(
-                                (fix_g802.partition('#703')[0], '#703V1', line.partition('#703')[2]))
+                                (fix_g802.partition('#703')[0], '#703V1', fix_g802.partition('#703')[2]))
                         new_nc_file.pop()
                         new_nc_file.append(fix_g802)
                         data['angle_c'] = get_number_after_letter(line, 'C')
@@ -592,9 +688,21 @@ def main(current_path):
                     tools.append(nc_tool)
                     add_multiple_macodell_files(
                         current_path, directory_name[1], sub_directory_name[1], correct_file, nc_file)
-                # tools = set(tools)
-                # add_one_bumotec_files(
-                #     current_path, directory_name[0], sub_directory_name[0], one_file_name, all_nc_files, tools)
+                tools = set(tools)
+                add_one_macodell_files(
+                    current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
+
+                # for Bumotec nc files
+                frame_num = 2
+                for pos, element in enumerate(all_nc_files):
+                    all_nc_files[pos], frame_num = from_macodell_to_bumotec(
+                        element, frame_num, objects_in_folder['nc'][pos])
+                for pos, block in enumerate(all_nc_files):
+                    nc_file_name = objects_in_folder['nc'][pos]
+                    add_multiple_bumotec_files(
+                        current_path, directory_name[0], sub_directory_name[1], nc_file_name, block)
+                add_one_bumotec_files(
+                    current_path, directory_name[0], sub_directory_name[0], one_file_name, all_nc_files, tools)
 
     # Check if error.log exist in work folder
     without_mistakes = 0
