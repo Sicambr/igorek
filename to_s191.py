@@ -554,6 +554,55 @@ def check_type_nc(path_to_folder, file_name):
     return type_machine
 
 
+def add_feed_with_parametr(current_path, file_name):
+    new_nc_file = list()
+    list_of_feeds = list()
+    try:
+        wrong_symbols = ('(', 'G802', 'G806')
+        with open(current_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                new_nc_file.append(line)
+                if (not line.startswith(wrong_symbols)) and ('F' in line):
+                    feed = get_number_after_letter(line, 'F')
+                    if feed not in list_of_feeds:
+                        list_of_feeds.append(feed)
+        number = 10
+        feeds = dict()
+        add_line_with_feed = list()
+        for feed in list_of_feeds:
+            if int(float(feed.partition('F')[2])) < 2000:
+                feeds[feed] = ''.join(('F', '#', str(number)))
+                temp_line = ''.join(
+                    ('#', str(number), '=', feed.partition('F')[2], '\n'))
+                add_line_with_feed.append(temp_line)
+                number += 1
+        for feed in list_of_feeds:
+            if int(float(feed.partition('F')[2])) >= 2000:
+                feeds[feed] = ''.join(('F', '#', str(number)))
+                temp_line = ''.join(
+                    ('#', str(number), '=', feed.partition('F')[2], '\n'))
+                add_line_with_feed.append(temp_line)
+                number += 1
+        for index, line in enumerate(new_nc_file):
+            if not line.startswith(wrong_symbols) and 'F' in line:
+                temp_feed = get_number_after_letter(line, 'F')
+                new_nc_file[index] = line.replace(
+                    temp_feed, feeds.get(temp_feed))
+        for index, line in enumerate(new_nc_file):
+            if line.startswith('S'):
+                new_nc_file.insert(index + 1, '\n')
+                for pos in range(len(add_line_with_feed)-1, -1, -1):
+                    new_nc_file.insert(index + 1, add_line_with_feed[pos])
+                new_nc_file.insert(index + 1, '\n')
+                break
+
+    except BaseException as exc:
+        error_message = f'Ошибка при попытке преобразовать подачи к виду F# '
+        error_message += f'в файле {file_name}.\n'
+        add_to_error_log(exc, error_message)
+    return new_nc_file
+
+
 def convert_macodell_to_normal_nc_file(path_to_folder, file_name, number):
     data = {'angle_c': '', 'tool_mes': '', 'frame_mes': '', 'speed': ''}
     current_path = os.path.join(path_to_folder, file_name)
@@ -623,7 +672,7 @@ def convert_macodell_to_normal_nc_file(path_to_folder, file_name, number):
     return new_nc_file, tool
 
 
-def main(current_path):
+def main(current_path, replace_feeds=False):
     # Clear an error.log file before run main script
     mistakes_path = os.path.join(os.path.abspath(''), 'error.log')
     if os.path.exists(mistakes_path):
@@ -678,6 +727,20 @@ def main(current_path):
                 add_one_macodell_files(
                     current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
 
+                # If we need to replace normal feed to F#
+                if replace_feeds:
+                    all_nc_files.clear()
+                    for nc_file in objects_in_folder['nc']:
+                        new_path = os.path.join(
+                            current_path, directory_name[1], sub_directory_name[1], nc_file)
+                        correct_file = add_feed_with_parametr(
+                            new_path, nc_file)
+                        all_nc_files.append(correct_file)
+                        add_multiple_macodell_files(
+                            current_path, directory_name[1], sub_directory_name[1], correct_file, nc_file)
+                    add_one_macodell_files(
+                        current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
+
             # TYPE MACHINE: MACODELL
             else:
                 # for Macodell nc files
@@ -703,6 +766,20 @@ def main(current_path):
                         current_path, directory_name[0], sub_directory_name[1], nc_file_name, block)
                 add_one_bumotec_files(
                     current_path, directory_name[0], sub_directory_name[0], one_file_name, all_nc_files, tools)
+
+                # If we need to replace normal feed to F#
+                if replace_feeds:
+                    all_nc_files.clear()
+                    for nc_file in objects_in_folder['nc']:
+                        new_path = os.path.join(
+                            current_path, directory_name[1], sub_directory_name[1], nc_file)
+                        correct_file = add_feed_with_parametr(
+                            new_path, nc_file)
+                        all_nc_files.append(correct_file)
+                        add_multiple_macodell_files(
+                            current_path, directory_name[1], sub_directory_name[1], correct_file, nc_file)
+                    add_one_macodell_files(
+                        current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
 
     # Check if error.log exist in work folder
     without_mistakes = 0

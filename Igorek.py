@@ -16,18 +16,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowIcon(ico)
         current_path = to_s191.load_path()
         self.show_path.setText(current_path)
-        
+
         self.start_button.pressed.connect(
             lambda: self.start_button_pressed())
 
-        self.read_log_file.triggered.connect(lambda: self.read_log_file_pressed())
+        self.read_log_file.triggered.connect(
+            lambda: self.read_log_file_pressed())
 
         self.new_explorer = QFileDialog
         self.change_path.pressed.connect(lambda: self.change_path_pressed())
 
     def change_path_pressed(self):
-        current_path=self.show_path.text()
-        dir_name = self.new_explorer.getExistingDirectory(directory=current_path)
+        current_path = self.show_path.text()
+        dir_name = self.new_explorer.getExistingDirectory(
+            directory=current_path)
         if not dir_name:
             self.show_path.setText(current_path)
         else:
@@ -39,18 +41,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             os.startfile(mistakes_path)
 
     def start_button_pressed(self):
-        current_path=self.show_path.text()
+        current_path = self.show_path.text()
         self.status_label.setText(
             'В работе по созданию новых .NC файлов. Ждем...')
-        mistakes = to_s191.main(current_path)
+        write_feed = self.replace_mac_feed.checkState()
+        mistakes = to_s191.main(current_path, write_feed)
         to_s191.save_path(current_path)
         if mistakes:
             self.status_label.setText(
-                'Что-то пошло не так... Проверьте ошибки в файле error.log программы.')    
+                'Что-то пошло не так... Проверьте ошибки в файле error.log программы.')
         else:
             self.status_label.setText(
                 'Файлы для Bumotec и Macodell успешно собраны.')
-        
 
 
 app = QApplication(sys.argv)

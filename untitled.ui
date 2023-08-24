@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>933</width>
-    <height>280</height>
+    <height>336</height>
    </rect>
   </property>
   <property name="font">
@@ -16,7 +16,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>IGOREK_v1.2</string>
+   <string>IGOREK_v1.3</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QLabel" name="title_lable">
@@ -58,7 +58,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>170</y>
+      <y>210</y>
       <width>121</width>
       <height>41</height>
      </rect>
@@ -71,7 +71,7 @@
     <property name="geometry">
      <rect>
       <x>150</x>
-      <y>170</y>
+      <y>210</y>
       <width>771</width>
       <height>41</height>
      </rect>
@@ -91,6 +91,19 @@
     </property>
     <property name="text">
      <string>Программа для сборки *.NC файлов. Постпроцессоры: S191_v8.2,  W508S_v7.1</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="replace_mac_feed">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>170</y>
+      <width>451</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Замена подач F на F#10 для Macodell файлов</string>
     </property>
    </widget>
   </widget>
