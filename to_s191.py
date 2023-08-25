@@ -679,6 +679,21 @@ def convert_macodell_to_normal_nc_file(path_to_folder, file_name, number):
                 else:
                     break
                 count += 1
+
+            miss_symbols = ('(', 'M8')
+            check_G806 = False
+            for index, line in enumerate(new_nc_file):
+                if check_G806:
+                    if not line.startswith(miss_symbols):
+                        if line.startswith('S'):
+                            break
+                        else:
+                            temp_line = ''.join((data['speed'], '\n'))
+                            new_nc_file.insert(index, temp_line)
+                            break
+                if line.startswith('G806'):
+                    data['speed'] = get_number_after_letter(line, 'S')
+                    check_G806 = True
     except BaseException as exc:
         error_message = f'Ошибка при попытке преобразования файла {file_name} в папке {path_to_folder}.\n'
         add_to_error_log(exc, error_message)

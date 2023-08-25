@@ -57,8 +57,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.status_label.setText(
                 'Что-то пошло не так... Проверьте ошибки в файле error.log программы.')
         else:
-            self.status_label.setText(
-                'Файлы для Bumotec и Macodell успешно собраны.')
+            if load_switchers[0] and load_switchers[1]:
+                self.status_label.setText(
+                    'Файлы для Bumotec и Macodell успешно собраны.')
+            elif load_switchers[0] and not load_switchers[1]:
+                self.status_label.setText(
+                    'Файлы для Bumotec успешно собраны.')
+            elif load_switchers[1] and not load_switchers[0]:
+                self.status_label.setText(
+                    'Файлы для Macodell успешно собраны.')
 
 
 app = QApplication(sys.argv)

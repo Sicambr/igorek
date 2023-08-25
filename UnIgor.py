@@ -26,7 +26,8 @@ class Ui_MainWindow(object):
         self.horizontalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
         self.horizontalLayoutWidget.setGeometry(QtCore.QRect(10, 90, 901, 61))
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
-        self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
+        self.horizontalLayout = QtWidgets.QHBoxLayout(
+            self.horizontalLayoutWidget)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.show_path = QtWidgets.QLineEdit(self.horizontalLayoutWidget)
@@ -79,14 +80,20 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "IGOREK_v1.3"))
-        self.title_lable.setText(_translate("MainWindow", "Папка где лежат *.NC файлы:"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "IGOREK_v1.31"))
+        self.title_lable.setText(_translate(
+            "MainWindow", "Папка где лежат *.NC файлы:"))
         self.change_path.setText(_translate("MainWindow", "Открыть"))
         self.start_button.setText(_translate("MainWindow", "Старт"))
-        self.label.setText(_translate("MainWindow", "Программа для сборки *.NC файлов. Постпроцессоры: S191_v8.2,  W508S_v7.1"))
-        self.replace_mac_feed.setText(_translate("MainWindow", "Замена подач F на F#10 для Macodell файлов"))
-        self.gen_macodel.setText(_translate("MainWindow", "Собрать файлы для Macodell"))
-        self.gen_bumotec.setText(_translate("MainWindow", "Собрать файлы для Bumotec"))
+        self.label.setText(_translate(
+            "MainWindow", "Программа для сборки *.NC файлов. Постпроцессоры: S191_v8.2,  W508S_v7.1"))
+        self.replace_mac_feed.setText(_translate(
+            "MainWindow", "Замена подач F на F#10 для Macodell файлов"))
+        self.gen_macodel.setText(_translate(
+            "MainWindow", "Собрать файлы для Macodell"))
+        self.gen_bumotec.setText(_translate(
+            "MainWindow", "Собрать файлы для Bumotec"))
         self.menu.setTitle(_translate("MainWindow", "Управление"))
         self.action.setText(_translate("MainWindow", "открыть"))
-        self.read_log_file.setText(_translate("MainWindow", "Посмотреть error.log"))
+        self.read_log_file.setText(_translate(
+            "MainWindow", "Посмотреть error.log"))

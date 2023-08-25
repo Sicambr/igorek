@@ -16,7 +16,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>IGOREK_v1.3</string>
+   <string>IGOREK_v1.31</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QLabel" name="title_lable">
