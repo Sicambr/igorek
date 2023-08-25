@@ -504,22 +504,26 @@ def get_data_from_config():
 def load_path():
     current_path = os.path.join(os.path.abspath(''), 'data', 'config.txt')
     data = list()
+    switchers = list()
     try:
         with open(current_path, 'r', encoding='UTF-8') as file:
             for line in file:
                 if line.strip() != '':
                     data.append(line.partition('=')[2].strip())
-        current_path = data[5]
+        switchers.append(data[5])
+        switchers.append(data[6])
+        switchers.append(data[7])
+        current_path = data[8]
         if not os.path.exists(current_path):
             current_path = os.path.join(os.path.abspath(''), 'CATIA')
     except BaseException as exc:
         current_path = os.path.join(os.path.abspath(''), 'CATIA')
         error_message = f'Неверно сохранены данные внутри config.txt или файл отсутсвует.\n'
         add_to_error_log(exc, error_message)
-    return current_path
+    return switchers, current_path
 
 
-def save_path(last_path):
+def save_config(load_switchers, last_path):
     current_path = os.path.join(os.path.abspath(''), 'data', 'config.txt')
     try:
         data = list()
@@ -527,7 +531,16 @@ def save_path(last_path):
             for line in read_file:
                 data.append(line)
         with open(current_path, 'w', encoding='UTF-8') as write_file:
-            write_file.writelines(data[:-1])
+            write_file.writelines(data[:-4])
+            temp_line = ''.join(
+                ('set on generate Bumotec files=', str(load_switchers[0]), '\n'))
+            write_file.writelines(temp_line)
+            temp_line = ''.join(
+                ('set on generate Macodell files=', str(load_switchers[1]), '\n'))
+            write_file.writelines(temp_line)
+            temp_line = ''.join(
+                ('set on F# switcher=', str(load_switchers[2]), '\n'))
+            write_file.writelines(temp_line)
             new_path = ''.join(('path=', last_path))
             write_file.writelines(new_path)
     except BaseException as exc:
@@ -672,7 +685,22 @@ def convert_macodell_to_normal_nc_file(path_to_folder, file_name, number):
     return new_nc_file, tool
 
 
-def main(current_path, replace_feeds=False):
+def delete_files_and_folder(folder):
+    list_of_files = os.listdir(folder)
+    for file in list_of_files:
+        path = os.path.join(folder, file)
+        os.remove(path)
+    os.rmdir(folder)
+
+
+def main(current_path, load_switchers):
+    replace_feeds = False
+    allow_bumotec = True
+    allow_macodell = True
+    if len(load_switchers) >= 2:
+        replace_feeds = load_switchers[2]
+        allow_bumotec = load_switchers[0]
+        allow_macodell = load_switchers[1]
     # Clear an error.log file before run main script
     mistakes_path = os.path.join(os.path.abspath(''), 'error.log')
     if os.path.exists(mistakes_path):
@@ -680,7 +708,7 @@ def main(current_path, replace_feeds=False):
 
     # Load parametrs from data/config.txt
     data = get_data_from_config()
-    if data and len(data) == 6:
+    if data and (len(data) == 9) and (allow_bumotec or allow_macodell):
         directory_name = (data[0], data[1])
         sub_directory_name = (data[2], data[3])
         one_file_name = data[4]
@@ -780,7 +808,25 @@ def main(current_path, replace_feeds=False):
                             current_path, directory_name[1], sub_directory_name[1], correct_file, nc_file)
                     add_one_macodell_files(
                         current_path, directory_name[1], sub_directory_name[0], one_file_name, all_nc_files, tools)
-
+        # Delete bumotec folder if not check box
+        if not allow_bumotec:
+            folder_path = os.path.join(
+                current_path, directory_name[0], sub_directory_name[0])
+            delete_files_and_folder(folder_path)
+            folder_path = os.path.join(
+                current_path, directory_name[0], sub_directory_name[1])
+            delete_files_and_folder(folder_path)
+            folder_path = os.path.join(current_path, directory_name[0])
+            delete_files_and_folder(folder_path)
+        if not allow_macodell:
+            folder_path = os.path.join(
+                current_path, directory_name[1], sub_directory_name[0])
+            delete_files_and_folder(folder_path)
+            folder_path = os.path.join(
+                current_path, directory_name[1], sub_directory_name[1])
+            delete_files_and_folder(folder_path)
+            folder_path = os.path.join(current_path, directory_name[1])
+            delete_files_and_folder(folder_path)
     # Check if error.log exist in work folder
     without_mistakes = 0
     if os.path.exists(mistakes_path):

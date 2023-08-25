@@ -3,4 +3,7 @@ second directory=Macodell
 directory name for one big file=ONE_FILE
 directory name for multiple files=ALL
 big file=O1234.NC
+set on generate Bumotec files=2
+set on generate Macodell files=2
+set on F# switcher=0
 path=D:/ZORIN/1111/ДЛЯ РОМЫ З

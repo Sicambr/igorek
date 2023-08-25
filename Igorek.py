@@ -14,8 +14,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         ico = QtGui.QIcon('cnc.ico')
         self.setWindowIcon(ico)
-        current_path = to_s191.load_path()
+        load_switchers, current_path = to_s191.load_path()
         self.show_path.setText(current_path)
+        self.gen_bumotec.setCheckState(int(load_switchers[0]))
+        self.gen_macodel.setCheckState(int(load_switchers[1]))
+        self.replace_mac_feed.setCheckState(int(load_switchers[2]))
 
         self.start_button.pressed.connect(
             lambda: self.start_button_pressed())
@@ -44,9 +47,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         current_path = self.show_path.text()
         self.status_label.setText(
             'В работе по созданию новых .NC файлов. Ждем...')
-        write_feed = self.replace_mac_feed.checkState()
-        mistakes = to_s191.main(current_path, write_feed)
-        to_s191.save_path(current_path)
+        load_switchers = list()
+        load_switchers.append(self.gen_bumotec.checkState())
+        load_switchers.append(self.gen_macodel.checkState())
+        load_switchers.append(self.replace_mac_feed.checkState())
+        mistakes = to_s191.main(current_path, load_switchers)
+        to_s191.save_config(load_switchers, current_path)
         if mistakes:
             self.status_label.setText(
                 'Что-то пошло не так... Проверьте ошибки в файле error.log программы.')
