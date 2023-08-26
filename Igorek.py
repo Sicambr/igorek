@@ -2,9 +2,11 @@ import sys
 import os
 import to_s191
 
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QLineEdit, QAction, QFileDialog
-from PyQt5 import QtWidgets, uic, QtGui
+# from PyQt5.QtCore import QSize, Qt
+# from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QLineEdit, QAction, QFileDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog
+from PyQt5 import QtWidgets, QtGui
+# from PyQt5 import QtWidgets, uic, QtGui
 from UnIgor import Ui_MainWindow
 
 
@@ -46,13 +48,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def start_button_pressed(self):
         current_path = self.show_path.text()
         self.status_label.setText(
-            'В работе по созданию новых .NC файлов. Ждем...')
+            'Выполняется. Ждем...')
+        QtWidgets.qApp.processEvents()  # help to show label status
         load_switchers = list()
         load_switchers.append(self.gen_bumotec.checkState())
         load_switchers.append(self.gen_macodel.checkState())
         load_switchers.append(self.replace_mac_feed.checkState())
         mistakes = to_s191.main(current_path, load_switchers)
         to_s191.save_config(load_switchers, current_path)
+
         if mistakes:
             self.status_label.setText(
                 'Что-то пошло не так... Проверьте ошибки в файле error.log программы.')

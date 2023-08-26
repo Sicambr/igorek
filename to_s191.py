@@ -47,9 +47,8 @@ def get_normal_num_t(line):
             t_number += symbol
         else:
             break
-    if len(t_number) > 0:
-        t_number = ''.join(('(T', t_number))
-        line_without_t_number = ''.join(('(', (line.partition(t_number)[2])))
+    t_number = ''.join(('(T', t_number))
+    line_without_t_number = ''.join(('(', (line.partition(t_number)[2])))
     return line_without_t_number
 
 
@@ -79,6 +78,8 @@ def convert_bumotec_to_normal_nc_file(path_to_folder, file_name, frame_num):
                         check_next_line = False
                 if line.startswith('M6T'):
                     data['tool_num'] = get_number_after_letter(line, 'T')
+                    tool = buffer_message
+                    data['tool_mes'] = buffer_message
                     if buffer_message.startswith('(T'):
                         buffer_message = get_normal_num_t(buffer_message)
                         tool = buffer_message
@@ -167,9 +168,29 @@ def convert_bumotec_to_normal_nc_file(path_to_folder, file_name, frame_num):
         add_to_error_log(exc, error_message)
     frame_num += 1
     if count_g201 <= 1:
+        new_nc_file = add_g304_to_line(new_nc_file)
         return new_nc_file, tool, frame_num
     else:
+        multiple_nc_file = add_g304_to_line(multiple_nc_file)
         return multiple_nc_file, tool, frame_num
+
+
+def add_g304_to_line(nc_file):
+    data = {'angle_c': '', 'angle_b': ''}
+    new_nc_file = list()
+    for index, line in enumerate(nc_file):
+        new_nc_file.append(line)
+        if line.startswith('M3S') and nc_file[index + 1].startswith('G0C'):
+            data['angle_c'] = get_number_after_letter(nc_file[index + 1], 'C')
+        elif line.startswith('G201'):
+            data['angle_b'] = get_number_after_letter(line, 'B')
+            new_nc_file.pop()
+            temp_message = ''.join(
+                ('G304X#510Y#511Z#512', data['angle_c'], '\n'))
+            new_nc_file.append(temp_message)
+            temp_message = ''.join(('G201X0Y0Z0', data['angle_b'], '\n'))
+            new_nc_file.append(temp_message)
+    return new_nc_file
 
 
 def get_file_list(path):
@@ -365,6 +386,7 @@ def from_macodell_to_bumotec(macodel_block, frame_num, file_name):
         bumotec_block.append('M5\n')
         bumotec_block.append('M53\n')
         bumotec_block.append('M00\n')
+        bumotec_block = add_g304_to_line(bumotec_block)
     except BaseException as exc:
         error_message = f'Найдена проблема в файле {file_name}.'
         error_message += f' Файл либо пустой, либо сгенерирован CATIA неправильно.\n'
@@ -712,6 +734,7 @@ def main(current_path, load_switchers):
     replace_feeds = False
     allow_bumotec = True
     allow_macodell = True
+    replace_g304 = True
     if len(load_switchers) >= 2:
         replace_feeds = load_switchers[2]
         allow_bumotec = load_switchers[0]
