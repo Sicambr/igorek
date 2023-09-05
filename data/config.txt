@@ -6,4 +6,4 @@ big file=O1234.NC
 set on generate Bumotec files=2
 set on generate Macodell files=2
 set on F# switcher=0
-path=D:/ZORIN/1111/4-координатка/w508s_gen
+path=D:/ZORIN/1111/YST-1

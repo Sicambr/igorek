@@ -2,11 +2,8 @@ import sys
 import os
 import to_s191
 
-# from PyQt5.QtCore import QSize, Qt
-# from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QLineEdit, QAction, QFileDialog
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog
 from PyQt5 import QtWidgets, QtGui
-# from PyQt5 import QtWidgets, uic, QtGui
 from UnIgor import Ui_MainWindow
 
 

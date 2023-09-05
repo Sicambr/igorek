@@ -647,6 +647,7 @@ def convert_macodell_to_normal_nc_file(path_to_folder, file_name, number):
         new_nc_file.append(''.join(('N', str(number*10), '\n')))
         start_write = False
         can_add_M1 = False
+        found_g802 = False
         shrink_head = list()
         with open(current_path, 'r', encoding='utf-8') as file:
             for line in file:
@@ -671,6 +672,7 @@ def convert_macodell_to_normal_nc_file(path_to_folder, file_name, number):
                             new_nc_file.pop()
                             new_nc_file.append(fix_g806)
                     elif line.startswith('G802'):
+                        found_g802 = True
                         data['speed'] = get_number_after_letter(line, 'S')
                         fix_g802 = ''.join(
                             (line.partition(data['speed'])[0], line.partition(data['speed'])[2]))
@@ -716,6 +718,22 @@ def convert_macodell_to_normal_nc_file(path_to_folder, file_name, number):
                 if line.startswith('G806'):
                     data['speed'] = get_number_after_letter(line, 'S')
                     check_G806 = True
+            miss_symbols = ('(', '\n', ' ')
+            if found_g802:
+                for index, line in enumerate(new_nc_file):
+                    if line.startswith('G802'):
+                        count = 1
+                        while count < 10:
+                            if new_nc_file[index - count].startswith(('M1', 'M3')):
+                                break
+                            if not new_nc_file[index - count].startswith(miss_symbols):
+                                new_nc_file.insert((index - count + 1), '\n')
+                                new_nc_file.insert((index - count + 1), 'M3\n')
+                                new_nc_file.insert((index - count + 1), 'M1\n')
+                                new_nc_file.insert((index - count + 1), '\n')
+                                break
+                            count += 1
+
     except BaseException as exc:
         error_message = f'Ошибка при попытке преобразования файла {file_name} в папке {path_to_folder}.\n'
         add_to_error_log(exc, error_message)

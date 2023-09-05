@@ -80,7 +80,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "IGOREK_v1.32"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "IGOREK_v1.33"))
         self.title_lable.setText(_translate(
             "MainWindow", "Папка где лежат *.NC файлы:"))
         self.change_path.setText(_translate("MainWindow", "Открыть"))
