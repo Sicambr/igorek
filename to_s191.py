@@ -718,10 +718,14 @@ def convert_macodell_to_normal_nc_file(path_to_folder, file_name, number):
                 if line.startswith('G806'):
                     data['speed'] = get_number_after_letter(line, 'S')
                     check_G806 = True
+
             miss_symbols = ('(', '\n', ' ')
+            can_add_M1 = False
             if found_g802:
                 for index, line in enumerate(new_nc_file):
-                    if line.startswith('G802'):
+                    if line.startswith('S'):
+                        can_add_M1 = True
+                    elif line.startswith('(') and can_add_M1:
                         count = 1
                         while count < 10:
                             if new_nc_file[index - count].startswith(('M1', 'M3')):
